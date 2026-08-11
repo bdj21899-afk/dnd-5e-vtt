@@ -10,6 +10,7 @@ export const defaultCharacter: Character = {
   name: 'New Adventurer',
   race: 'Human', charClass: 'Fighter', subclass: '', level: 1,
   background: 'Soldier', alignment: 'True Neutral', xp: 0,
+  avatarUrl: '',
   abilityScores: { strength: 10, dexterity: 10, constitution: 10, intelligence: 10, wisdom: 10, charisma: 10 },
   maxHp: 10, currentHp: 10, tempHp: 0,
   ac: 10, speed: 30, hitDice: 'd10', hitDiceUsed: 0,

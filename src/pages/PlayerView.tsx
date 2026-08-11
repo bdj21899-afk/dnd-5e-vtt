@@ -3,17 +3,23 @@ import { useNavigate } from 'react-router-dom';
 import { MapCanvas } from '@/components/features/map/MapCanvas';
 import { CharacterSheet } from '@/components/features/player/CharacterSheet';
 import { VoiceChat } from '@/components/features/voice/VoiceChat';
-import { GameSession } from '@/types/dnd';
-import { loadSession, saveSession } from '@/lib/gameApi';
+import { PlayerDiceRoller } from '@/components/features/dice/PlayerDiceRoller';
+import { DiceRollOverlay } from '@/components/features/dice/DiceRollOverlay';
+import { GameSession, DiceRollBroadcast } from '@/types/dnd';
+import { loadSession, saveSession, fetchRecentRolls } from '@/lib/gameApi';
 import { LogOut, Wifi, WifiOff } from 'lucide-react';
 
 export default function PlayerView() {
   const navigate = useNavigate();
   const [session, setSession] = useState<GameSession | null>(null);
   const [connected, setConnected] = useState(true);
+  const [incomingRoll, setIncomingRoll] = useState<DiceRollBroadcast | null>(null);
+
   const playerName = localStorage.getItem('dnd_player_name') || 'Adventurer';
   const playerId = localStorage.getItem('dnd_player_id') || '';
   const sessionIdRef = useRef<string | null>(null);
+  const seenRolls = useRef<Set<string>>(new Set());
+  const rollPollSince = useRef(new Date().toISOString());
 
   useEffect(() => {
     const id = localStorage.getItem('dnd_current_session');
@@ -29,15 +35,32 @@ export default function PlayerView() {
       else if (!local) navigate('/');
     }).catch(() => setConnected(false));
 
-    const interval = setInterval(() => {
+    // Poll session
+    const sessionInterval = setInterval(() => {
       loadSession(id).then(remote => {
         if (remote) { setSession(remote); setConnected(true); }
         else setConnected(false);
       }).catch(() => setConnected(false));
     }, 1500);
 
-    return () => clearInterval(interval);
-  }, [navigate]);
+    // Poll dice rolls from others
+    const rollInterval = setInterval(async () => {
+      const rolls = await fetchRecentRolls(id, rollPollSince.current);
+      rollPollSince.current = new Date().toISOString();
+      for (const roll of rolls) {
+        if (!seenRolls.current.has(roll.id) && roll.playerId !== playerId) {
+          seenRolls.current.add(roll.id);
+          setIncomingRoll(roll);
+          break; // Show one at a time
+        }
+      }
+    }, 1500);
+
+    return () => {
+      clearInterval(sessionInterval);
+      clearInterval(rollInterval);
+    };
+  }, [navigate, playerId]);
 
   const updateTokens = (tokens: GameSession['tokens']) => {
     if (!session) return;
@@ -59,6 +82,9 @@ export default function PlayerView() {
 
   return (
     <div className="flex flex-col h-screen bg-[#06090f] overflow-hidden">
+      {/* Incoming roll overlay (from other players / DM) */}
+      <DiceRollOverlay roll={incomingRoll}/>
+
       <div className="flex items-center gap-3 px-4 py-2 bg-[#0b0e1a] border-b border-amber-900/30 flex-shrink-0 h-11">
         <span className="text-amber-600 text-[11px] tracking-widest font-bold hidden sm:block">⚔ DUNGEON FORGE</span>
         <div className="w-px h-4 bg-amber-900/50 hidden sm:block"/>
@@ -84,6 +110,12 @@ export default function PlayerView() {
             mapOffsetX={session.mapOffsetX}
             mapOffsetY={session.mapOffsetY}
             mapScale={session.mapScale}
+            mapBrightness={session.mapBrightness}
+            mapContrast={session.mapContrast}
+            gridEnabled={session.gridEnabled}
+            gridSize={session.gridSize}
+            gridOffsetX={session.gridOffsetX}
+            gridOffsetY={session.gridOffsetY}
             onTokensUpdate={updateTokens}
           />
         </div>
@@ -95,6 +127,15 @@ export default function PlayerView() {
           <div className="flex-1 overflow-hidden">
             <CharacterSheet/>
           </div>
+
+          {/* Player dice roller */}
+          <PlayerDiceRoller
+            compact
+            sessionId={session.id}
+            playerId={playerId}
+            playerName={playerName}
+          />
+
           {/* Voice Chat */}
           <VoiceChat sessionId={session.id} userId={playerId || 'player_' + Date.now()} userName={playerName}/>
         </div>

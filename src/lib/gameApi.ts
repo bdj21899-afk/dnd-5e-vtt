@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { GameSession } from '@/types/dnd';
+import { GameSession, DiceRollBroadcast } from '@/types/dnd';
 
 const fromRow = (r: any): GameSession => ({
   id: r.id, name: r.name, dmName: r.dm_name,
@@ -13,11 +13,16 @@ const fromRow = (r: any): GameSession => ({
   mapOffsetX: r.map_offset_x ?? 0,
   mapOffsetY: r.map_offset_y ?? 0,
   mapScale: r.map_scale ?? 1,
+  mapBrightness: r.map_brightness ?? 115,
+  mapContrast: r.map_contrast ?? 100,
+  gridEnabled: r.grid_enabled ?? false,
+  gridSize: r.grid_size ?? 50,
+  gridOffsetX: r.grid_offset_x ?? 0,
+  gridOffsetY: r.grid_offset_y ?? 0,
 });
 
 const toRow = (s: GameSession) => ({
   id: s.id, name: s.name, dm_name: s.dmName,
-  // Only sync URL-based map images (not large base64 strings)
   map_image: s.mapImage?.startsWith('http') ? s.mapImage : null,
   tokens: s.tokens,
   fog_revealed: s.fogRevealed,
@@ -28,6 +33,12 @@ const toRow = (s: GameSession) => ({
   map_offset_x: s.mapOffsetX ?? 0,
   map_offset_y: s.mapOffsetY ?? 0,
   map_scale: s.mapScale ?? 1,
+  map_brightness: s.mapBrightness ?? 115,
+  map_contrast: s.mapContrast ?? 100,
+  grid_enabled: s.gridEnabled ?? false,
+  grid_size: s.gridSize ?? 50,
+  grid_offset_x: s.gridOffsetX ?? 0,
+  grid_offset_y: s.gridOffsetY ?? 0,
 });
 
 export async function createSession(session: GameSession): Promise<void> {
@@ -71,4 +82,26 @@ export async function uploadMapImage(sessionId: string, file: File): Promise<str
   if (error) throw new Error(error.message);
   const { data } = supabase.storage.from('dnd-maps').getPublicUrl(path);
   return data.publicUrl;
+}
+
+// ── Dice roll broadcast ────────────────────────────────────────────────────────
+
+export async function broadcastDiceRoll(
+  sessionId: string, playerId: string, playerName: string, die: string, result: number
+): Promise<void> {
+  await supabase.from('dice_rolls').insert({ session_id: sessionId, player_id: playerId, player_name: playerName, die, result });
+}
+
+export async function fetchRecentRolls(sessionId: string, since: string): Promise<DiceRollBroadcast[]> {
+  const { data, error } = await supabase
+    .from('dice_rolls')
+    .select('*')
+    .eq('session_id', sessionId)
+    .gte('created_at', since)
+    .order('created_at', { ascending: true });
+  if (error || !data) return [];
+  return data.map(r => ({
+    id: r.id, sessionId: r.session_id, playerName: r.player_name,
+    playerId: r.player_id, die: r.die, result: r.result, createdAt: r.created_at,
+  }));
 }

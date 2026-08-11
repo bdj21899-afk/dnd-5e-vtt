@@ -12,8 +12,9 @@ export interface Token {
   maxHp: number;
   ac: number;
   isPC: boolean;
-  ownerId: string; // playerName for PC tokens, 'dm' for monsters
+  ownerId: string;
   imageUrl?: string;
+  notes?: string;
 }
 
 export interface InitiativeEntry {
@@ -43,21 +44,36 @@ export interface SceneNote {
   type: 'note' | 'handout' | 'secret';
 }
 
+export interface DiceRollBroadcast {
+  id: string;
+  sessionId: string;
+  playerName: string;
+  playerId: string;
+  die: string;
+  result: number;
+  createdAt: string;
+}
+
 export interface GameSession {
   id: string;
   name: string;
   dmName: string;
   mapImage: string | null;
   tokens: Token[];
-  fogRevealed: string[]; // "cx,cy" cell keys
+  fogRevealed: string[];
   initiative: InitiativeEntry[];
   initiativeIndex: number;
   notes: SceneNote[];
   loot: LootItem[];
-  // Map view (DM-controlled, synced to all players)
   mapOffsetX?: number;
   mapOffsetY?: number;
   mapScale?: number;
+  mapBrightness?: number;
+  mapContrast?: number;
+  gridEnabled?: boolean;
+  gridSize?: number;
+  gridOffsetX?: number;
+  gridOffsetY?: number;
 }
 
 export interface SkillProf {
@@ -100,6 +116,7 @@ export interface Character {
   background: string;
   alignment: string;
   xp: number;
+  avatarUrl?: string;
   abilityScores: AbilityScores;
   maxHp: number;
   currentHp: number;
@@ -151,4 +168,6 @@ export interface MonsterData {
   traits?: { name: string; desc: string }[];
   actions: { name: string; desc: string }[];
   legendaryActions?: { name: string; desc: string }[];
+  imageUrl?: string;
+  isCustom?: boolean;
 }

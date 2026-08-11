@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useCharacter } from '@/hooks/useCharacter';
 import { ABILITIES, SKILLS, CLASSES, RACES, BACKGROUNDS, ALIGNMENTS, HIT_DICE, modStr } from '@/constants/dnd5e';
 import { AbilityKey, EquipItem, Spell } from '@/types/dnd';
-import { Plus, Trash2, Star, Heart } from 'lucide-react';
+import { Plus, Trash2, Star, Heart, ImageIcon } from 'lucide-react';
 
 const TABS = ['Stats','Skills','Combat','Spells','Gear','Notes'] as const;
 type Tab = typeof TABS[number];
@@ -56,6 +56,12 @@ export function CharacterSheet() {
         {/* ── STATS TAB ── */}
         {tab === 'Stats' && (
           <>
+            {/* Avatar */}
+            {char.avatarUrl && (
+              <div className="flex justify-center mb-2">
+                <img src={char.avatarUrl} alt={char.name} className="w-20 h-20 rounded-full object-cover border-2 border-amber-700/60 shadow-lg"/>
+              </div>
+            )}
             {/* Identity */}
             <div className="grid grid-cols-2 gap-1.5">
               <div className="col-span-2"><label className="text-amber-800 text-[10px] tracking-widest block mb-0.5">CHARACTER NAME</label><input value={char.name} onChange={e=>update({name:e.target.value})} className={inp}/></div>
@@ -65,6 +71,10 @@ export function CharacterSheet() {
               <div><label className="text-amber-800 text-[10px] tracking-widest block mb-0.5">BACKGROUND</label><select value={char.background} onChange={e=>update({background:e.target.value})} className={sel}>{BACKGROUNDS.map(b=><option key={b}>{b}</option>)}</select></div>
               <div><label className="text-amber-800 text-[10px] tracking-widest block mb-0.5">ALIGNMENT</label><select value={char.alignment} onChange={e=>update({alignment:e.target.value})} className={sel}>{ALIGNMENTS.map(a=><option key={a}>{a}</option>)}</select></div>
               <div><label className="text-amber-800 text-[10px] tracking-widest block mb-0.5">XP</label><input type="number" min={0} value={char.xp} onChange={e=>update({xp:parseInt(e.target.value)||0})} className={inp}/></div>
+              <div className="col-span-2">
+                <label className="text-amber-800 text-[10px] tracking-widest block mb-0.5 flex items-center gap-1"><ImageIcon className="w-2.5 h-2.5"/> AVATAR URL</label>
+                <input value={char.avatarUrl || ''} onChange={e=>update({avatarUrl:e.target.value})} placeholder="https://… character image" className={inp}/>
+              </div>
             </div>
 
             {/* Proficiency + Inspiration */}

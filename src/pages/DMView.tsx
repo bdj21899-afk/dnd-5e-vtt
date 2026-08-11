@@ -8,12 +8,13 @@ import { SceneNotes } from '@/components/features/dm/SceneNotes';
 import { LootManager } from '@/components/features/dm/LootManager';
 import { MapSessionPanel } from '@/components/features/dm/MonsterTokenCreator';
 import { VoiceChat } from '@/components/features/voice/VoiceChat';
-import { GameSession, Token } from '@/types/dnd';
-import { loadSession, saveSession } from '@/lib/gameApi';
-import { LogOut, Cloud, CloudOff, User } from 'lucide-react';
+import { DiceRollOverlay } from '@/components/features/dice/DiceRollOverlay';
+import { GameSession, Token, DiceRollBroadcast } from '@/types/dnd';
+import { loadSession, saveSession, fetchRecentRolls } from '@/lib/gameApi';
+import { LogOut, Cloud, CloudOff } from 'lucide-react';
 
 const TABS = [
-  { id: 'map', label: '🗺', title: 'Map' },
+  { id: 'map', label: '🗺', title: 'Map & Tokens' },
   { id: 'dice', label: '🎲', title: 'Dice' },
   { id: 'combat', label: '⚔️', title: 'Combat' },
   { id: 'monsters', label: '📖', title: 'Monsters' },
@@ -28,10 +29,13 @@ export default function DMView() {
   const [tab, setTab] = useState('map');
   const [session, setSession] = useState<GameSession | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
+  const [incomingRoll, setIncomingRoll] = useState<DiceRollBroadcast | null>(null);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const seenRolls = useRef<Set<string>>(new Set());
+  const rollPollSince = useRef(new Date().toISOString());
 
   const dmName = localStorage.getItem('dnd_dm_name') || 'DM';
-  const dmId = localStorage.getItem('dnd_player_id') || 'dm_' + Date.now();
+  const dmId = 'dm_' + (localStorage.getItem('dnd_dm_name') || 'host').toLowerCase().replace(/\s+/g, '_');
 
   useEffect(() => {
     const id = localStorage.getItem('dnd_current_session');
@@ -43,18 +47,27 @@ export default function DMView() {
 
     loadSession(id).then(remote => {
       if (remote) {
-        // Load pending map from map builder if set
         const pendingMap = localStorage.getItem('dnd_pending_map');
-        if (pendingMap) {
-          remote.mapImage = pendingMap;
-          localStorage.removeItem('dnd_pending_map');
-        }
+        if (pendingMap) { remote.mapImage = pendingMap; localStorage.removeItem('dnd_pending_map'); }
         setSession(remote);
         localStorage.setItem(`dnd_session_${id}`, JSON.stringify(remote));
-      } else if (!local) {
-        navigate('/');
-      }
+      } else if (!local) { navigate('/'); }
     });
+
+    // Poll rolls from players
+    const rollInterval = setInterval(async () => {
+      const rolls = await fetchRecentRolls(id, rollPollSince.current);
+      rollPollSince.current = new Date().toISOString();
+      for (const roll of rolls) {
+        if (!seenRolls.current.has(roll.id)) {
+          seenRolls.current.add(roll.id);
+          setIncomingRoll(roll);
+          break;
+        }
+      }
+    }, 1500);
+
+    return () => clearInterval(rollInterval);
   }, [navigate]);
 
   const triggerSave = useCallback((s: GameSession) => {
@@ -95,6 +108,9 @@ export default function DMView() {
 
   return (
     <div className="flex flex-col h-screen bg-[#06090f] overflow-hidden">
+      {/* Player roll overlay */}
+      <DiceRollOverlay roll={incomingRoll}/>
+
       {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2 bg-[#0b0e1a] border-b border-amber-900/30 flex-shrink-0 h-11">
         <span className="text-amber-600 text-[11px] tracking-widest font-bold hidden sm:block">⚔ DUNGEON FORGE</span>
@@ -124,9 +140,20 @@ export default function DMView() {
             mapOffsetX={session.mapOffsetX}
             mapOffsetY={session.mapOffsetY}
             mapScale={session.mapScale}
+            mapBrightness={session.mapBrightness}
+            mapContrast={session.mapContrast}
+            gridEnabled={session.gridEnabled}
+            gridSize={session.gridSize}
+            gridOffsetX={session.gridOffsetX}
+            gridOffsetY={session.gridOffsetY}
             onMapUpload={url => update({ mapImage: url })}
             onTokensUpdate={tokens => update({ tokens })}
-            onMapSettingsUpdate={s => update({ mapOffsetX: s.offsetX, mapOffsetY: s.offsetY, mapScale: s.scale })}
+            onMapSettingsUpdate={s => update({
+              mapOffsetX: s.offsetX, mapOffsetY: s.offsetY, mapScale: s.scale,
+              mapBrightness: s.brightness, mapContrast: s.contrast,
+              gridEnabled: s.gridEnabled, gridSize: s.gridSize,
+              gridOffsetX: s.gridOffsetX, gridOffsetY: s.gridOffsetY,
+            })}
           />
         </div>
 
@@ -148,6 +175,7 @@ export default function DMView() {
                 sessionCode={session.id}
                 onAddPlayerToken={token => update({ tokens: [...session.tokens, token] })}
                 onRemoveToken={id => update({ tokens: session.tokens.filter(t => t.id !== id) })}
+                onUpdateToken={(id, patch) => update({ tokens: session.tokens.map(t => t.id === id ? { ...t, ...patch } : t) })}
               />
             )}
             {tab === 'dice' && <DiceRoller/>}
@@ -166,7 +194,7 @@ export default function DMView() {
           </div>
 
           {/* Voice Chat */}
-          <VoiceChat sessionId={session.id} userId={dmId} userName={session.dmName}/>
+          <VoiceChat sessionId={session.id} userId={dmId} userName={dmName}/>
         </div>
       </div>
     </div>
