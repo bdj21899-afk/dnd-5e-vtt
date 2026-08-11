@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 225 30% 5%;
+    --foreground: 38 55% 88%;
+    --card: 225 28% 8%;
+    --card-foreground: 38 55% 88%;
+    --popover: 225 28% 8%;
+    --popover-foreground: 38 55% 88%;
+    --primary: 38 72% 48%;
+    --primary-foreground: 225 30% 5%;
+    --secondary: 225 22% 13%;
+    --secondary-foreground: 38 55% 88%;
+    --muted: 225 22% 13%;
+    --muted-foreground: 38 22% 52%;
+    --accent: 38 72% 48%;
+    --accent-foreground: 225 30% 5%;
+    --destructive: 0 72% 42%;
+    --destructive-foreground: 38 55% 88%;
+    --border: 38 28% 18%;
+    --input: 225 22% 13%;
+    --ring: 38 72% 48%;
+    --radius: 0.375rem;
+    --sidebar-background: 225 30% 5%;
+    --sidebar-foreground: 38 55% 88%;
+    --sidebar-primary: 38 72% 48%;
+    --sidebar-primary-foreground: 225 30% 5%;
+    --sidebar-accent: 225 22% 13%;
+    --sidebar-accent-foreground: 38 55% 88%;
+    --sidebar-border: 38 28% 18%;
+    --sidebar-ring: 38 72% 48%;
+  }
+}
+
+@layer base {
+  * { @apply border-border; }
+  body { @apply bg-background text-foreground; }
+
+  /* Scrollbar styling */
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
+  ::-webkit-scrollbar-track { background: #06090f; }
+  ::-webkit-scrollbar-thumb { background: #3d2c0a; border-radius: 2px; }
+  ::-webkit-scrollbar-thumb:hover { background: #5c4210; }
+}
+
+.font-fantasy {
+  font-family: Georgia, 'Times New Roman', serif;
+}
