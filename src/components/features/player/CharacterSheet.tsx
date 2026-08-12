@@ -374,11 +374,11 @@ export function CharacterSheet() {
         {/* ── NOTES TAB ── */}
         {tab === 'Notes' && (
           <div className="space-y-2">
-            {[['PERSONALITY TRAITS','personalityTraits'],['IDEALS','ideals'],['BONDS','bonds'],['FLAWS','flaws'],['FEATURES & TRAITS','features'],['NOTES','notes']] .map(([label, field]) => (
-              <div key={field}>
-                <label className="text-amber-800 text-[9px] tracking-widest block mb-0.5">{label}</label>
-                <textarea value={char[field as keyof typeof char] as string} onChange={e=>update({[field]:e.target.value})}
-                  placeholder={`Enter ${label.toLowerCase()}...`} className={`${inp} resize-none ${field==='notes'||field==='features'?'h-20':'h-12'}`}/>
+            {([['PERSONALITY TRAITS','personalityTraits'],['IDEALS','ideals'],['BONDS','bonds'],['FLAWS','flaws'],['FEATURES & TRAITS','features'],['NOTES','notes']] as [string,string][]).map(([noteLabel, noteField]) => (
+              <div key={noteField}>
+                <label className="text-amber-800 text-[9px] tracking-widest block mb-0.5">{noteLabel}</label>
+                <textarea value={char[noteField as keyof typeof char] as string} onChange={e=>update({[noteField]:e.target.value})}
+                  placeholder={`Enter ${noteLabel.toLowerCase()}...`} className={`${inp} resize-none ${noteField==='notes'||noteField==='features'?'h-20':'h-12'}`}/>
               </div>
             ))}
           </div>

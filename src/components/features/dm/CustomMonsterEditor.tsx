@@ -122,10 +122,10 @@ export function CustomMonsterEditor({ onAddToken, onSaveMonster }: Props) {
 
       {/* Description fields */}
       <div className="space-y-1.5">
-        {([['Senses','senses'],['Languages','languages'],['Saves','saves'],['Skills','skills'],['Immunities','immunities'],['Resistances','resistances']] as [string, keyof MonsterData][]).map(([label, key]) => (
-          <div key={key}>
-            <div className="text-amber-800 text-[9px] mb-0.5">{label}</div>
-            <input value={(m[key] as string) || ''} onChange={e => up({ [key]: e.target.value })} className={inp}/>
+        {([['Senses','senses'],['Languages','languages'],['Saves','saves'],['Skills','skills'],['Immunities','immunities'],['Resistances','resistances']] as [string, keyof MonsterData][]).map(([fieldLabel, fieldKey]) => (
+          <div key={String(fieldKey)}>
+            <div className="text-amber-800 text-[9px] mb-0.5">{fieldLabel}</div>
+            <input value={(m[fieldKey] as string) || ''} onChange={e => up({ [fieldKey]: e.target.value })} className={inp}/>
           </div>
         ))}
       </div>
