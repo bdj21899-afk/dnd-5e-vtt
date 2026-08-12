@@ -215,14 +215,18 @@ export function CharacterSheet() {
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {[['AC', char.ac, (v:number)=>update({ac:v})],['Speed',char.speed,(v:number)=>update({speed:v})],['Init.',mod('dexterity'),null]] .map(([label,val,setter]) => (
-                <div key={label as string} className="bg-[#0d1525] border border-amber-900/30 rounded p-2 text-center">
-                  <div className="text-amber-700 text-[9px] tracking-widest mb-1">{label}</div>
-                  {setter ? (
-                    <input type="number" value={val as number} onChange={e=>setter(parseInt(e.target.value)||0)} className="bg-transparent text-amber-200 font-bold text-xl w-full text-center focus:outline-none focus:text-amber-400"/>
-                  ) : <div className="text-amber-200 font-bold text-xl font-mono">{modStr(val as number)}</div>}
-                </div>
-              ))}
+              <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2 text-center">
+                <div className="text-amber-700 text-[9px] tracking-widest mb-1">AC</div>
+                <input type="number" value={char.ac} onChange={e=>update({ac:parseInt(e.target.value)||0})} className="bg-transparent text-amber-200 font-bold text-xl w-full text-center focus:outline-none focus:text-amber-400"/>
+              </div>
+              <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2 text-center">
+                <div className="text-amber-700 text-[9px] tracking-widest mb-1">Speed</div>
+                <input type="number" value={char.speed} onChange={e=>update({speed:parseInt(e.target.value)||0})} className="bg-transparent text-amber-200 font-bold text-xl w-full text-center focus:outline-none focus:text-amber-400"/>
+              </div>
+              <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2 text-center">
+                <div className="text-amber-700 text-[9px] tracking-widest mb-1">Init.</div>
+                <div className="text-amber-200 font-bold text-xl font-mono">{modStr(mod('dexterity'))}</div>
+              </div>
             </div>
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2.5">
               <div className="text-amber-800 text-[9px] tracking-widest mb-1.5 uppercase">Hit Dice ({char.hitDice})</div>
