@@ -25,12 +25,21 @@ export default function CharacterBuilder() {
   const [saving, setSaving] = useState(false);
   const [newEquip, setNewEquip] = useState('');
 
+  const sanitizeChar = (raw: Character): Character => {
+    const validAbilities = ['strength','dexterity','constitution','intelligence','wisdom','charisma'] as const;
+    const merged = { ...defaultCharacter, ...raw };
+    if (typeof merged.spellcastingAbility !== 'string' || !validAbilities.includes(merged.spellcastingAbility as typeof validAbilities[number])) {
+      merged.spellcastingAbility = 'intelligence';
+    }
+    return merged;
+  };
+
   useEffect(() => {
     if (!user) return;
     if (editId) {
       listCharacters(user.id).then(cs => {
         const found = cs.find(c => c.id === editId);
-        if (found) { setChar({ ...defaultCharacter, ...found.characterData }); setCharId(found.id); }
+        if (found) { setChar(sanitizeChar(found.characterData)); setCharId(found.id); }
       });
     }
   }, [user, editId]);

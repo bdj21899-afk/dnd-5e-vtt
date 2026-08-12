@@ -61,10 +61,6 @@ export function CharacterSheet() {
   const removeSpell = (id: string) => update({ spells: char.spells.filter(s => s.id !== id) });
   const toggleSpellPrepared = (id: string) => update({ spells: char.spells.map(s => s.id === id ? {...s, prepared: !s.prepared} : s) });
 
-  const dotBtn = (filled: boolean, onClick: () => void, colorFilled: string, colorEmpty: string) => (
-    <button onClick={onClick} className={`w-3.5 h-3.5 rounded-full border transition-colors flex-shrink-0 ${filled ? `${colorFilled} border-transparent` : `${colorEmpty} border-current`}`}/>
-  );
-
   return (
     <div className="flex flex-col h-full bg-[#0b0e1a]">
       {/* Tab nav */}
@@ -157,13 +153,19 @@ export function CharacterSheet() {
             <div>
               <div className="text-amber-800 text-[10px] tracking-widest mb-1.5 uppercase">Saving Throws</div>
               <div className="grid grid-cols-2 gap-x-3 gap-y-1">
-                {ABILITIES.map(a => (
-                  <button key={a.key} onClick={() => upSaveProf(a.key)} className="flex items-center gap-1.5 group text-left">
-                    {dotBtn(!!char.saveProficiencies[a.key], ()=>upSaveProf(a.key), 'bg-amber-500', 'text-amber-800')}
-                    <span className="text-amber-600 font-mono text-[11px] w-7">{modStr(saveBonus(a.key))}</span>
-                    <span className="text-amber-300 text-xs group-hover:text-amber-200 transition-colors">{a.abbr}</span>
-                  </button>
-                ))}
+                {ABILITIES.map(a => {
+                  const filled = !!char.saveProficiencies[a.key];
+                  return (
+                    <div key={a.key} className="flex items-center gap-1.5">
+                      <button
+                        onClick={() => upSaveProf(a.key)}
+                        className={`w-3.5 h-3.5 rounded-full border transition-colors flex-shrink-0 ${filled ? 'bg-amber-500 border-transparent' : 'text-amber-800 border-current'}`}
+                      />
+                      <span className="text-amber-600 font-mono text-[11px] w-7">{modStr(saveBonus(a.key))}</span>
+                      <span className="text-amber-300 text-xs">{a.abbr}</span>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </>
