@@ -5,6 +5,48 @@ import { Loader2, BookOpen, Plus, Sparkles, Search, X, ChevronDown, ChevronUp, S
 import { MonsterData, LootItem, SceneNote } from '@/types/dnd';
 import { Token } from '@/types/dnd';
 
+// ─── Sourcebook & Campaign Presets ────────────────────────────────────────────
+
+interface SourcePreset {
+  label: string;
+  icon: string;
+  /** 'document' filters by Open5e document__slug; 'search' pre-fills the keyword */
+  type: 'document' | 'search';
+  value: string;
+  active: string;   // tailwind classes when selected
+  inactive: string; // tailwind classes when idle
+}
+
+const CORE_SOURCES: SourcePreset[] = [
+  { label: 'SRD / Core',       icon: '📖', type: 'document', value: 'wotc-srd',      active: 'border-amber-500   text-amber-300  bg-amber-900/30', inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'Tome of Beasts',   icon: '📚', type: 'document', value: 'tome-of-beasts', active: 'border-orange-500  text-orange-300 bg-orange-900/20', inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'Creature Codex',   icon: '🦎', type: 'document', value: 'cc',             active: 'border-red-500     text-red-300    bg-red-900/20',    inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'Tome of Beasts 2', icon: '📕', type: 'document', value: 'tob2',           active: 'border-rose-500    text-rose-300   bg-rose-900/20',   inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'Deep Magic',       icon: '✨', type: 'document', value: 'deep-magic',     active: 'border-purple-500  text-purple-300 bg-purple-900/20', inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'Menagerie',        icon: '🐉', type: 'document', value: 'menagerie',      active: 'border-green-500   text-green-300  bg-green-900/20',  inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'A5e',              icon: '⚔',  type: 'document', value: 'a5e',            active: 'border-sky-500     text-sky-300    bg-sky-900/20',    inactive: 'border-amber-900/30 text-amber-800' },
+  { label: 'Vault of Magic',   icon: '🔮', type: 'document', value: 'vault-of-magic', active: 'border-violet-500  text-violet-300 bg-violet-900/20', inactive: 'border-amber-900/30 text-amber-800' },
+];
+
+const CAMPAIGN_SOURCES: SourcePreset[] = [
+  { label: "Curse of Strahd",         icon: '🧛', type: 'search', value: 'vampire',    active: 'border-red-700     text-red-300    bg-red-950/40',     inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Mines of Phandelver",     icon: '⛏',  type: 'search', value: 'goblin',     active: 'border-stone-500   text-stone-300  bg-stone-900/30',   inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Storm King's Thunder",    icon: '⛈',  type: 'search', value: 'giant',      active: 'border-blue-600    text-blue-300   bg-blue-950/40',    inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Dragon of Icespire Peak", icon: '🏔',  type: 'search', value: 'dragon',     active: 'border-cyan-600    text-cyan-300   bg-cyan-950/40',    inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Waterdeep: Dragon Heist", icon: '🏙',  type: 'search', value: 'assassin',   active: 'border-yellow-600  text-yellow-300 bg-yellow-950/40',  inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Descent into Avernus",    icon: '🔥', type: 'search', value: 'devil',      active: 'border-orange-700  text-orange-300 bg-orange-950/40',  inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Rime of Frostmaiden",     icon: '❄',  type: 'search', value: 'frost',      active: 'border-sky-600     text-sky-200    bg-sky-950/40',     inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Candlekeep Mysteries",    icon: '📜', type: 'search', value: 'construct',  active: 'border-amber-700   text-amber-300  bg-amber-950/40',   inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Tomb of Annihilation",    icon: '💀', type: 'search', value: 'undead',     active: 'border-emerald-700 text-emerald-300 bg-emerald-950/40', inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Out of the Abyss",        icon: '🕳',  type: 'search', value: 'demon',      active: 'border-violet-700  text-violet-300 bg-violet-950/40',  inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Princes of Apocalypse",   icon: '🌪',  type: 'search', value: 'elemental',  active: 'border-teal-600    text-teal-300   bg-teal-950/40',    inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Tyranny of Dragons",      icon: '🐲', type: 'search', value: 'cultist',    active: 'border-red-800     text-red-200    bg-red-950/50',     inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Wild Beyond Witchlight",  icon: '🦋', type: 'search', value: 'fey',        active: 'border-pink-600    text-pink-300   bg-pink-950/40',    inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Spelljammer",             icon: '🚀', type: 'search', value: 'humanoid',   active: 'border-indigo-600  text-indigo-300 bg-indigo-950/40',  inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Planescape",              icon: '🌀', type: 'search', value: 'fiend',      active: 'border-fuchsia-600 text-fuchsia-300 bg-fuchsia-950/40', inactive: 'border-amber-900/30 text-amber-800' },
+  { label: "Keys from Golden Vault",  icon: '🗝',  type: 'search', value: 'guard',      active: 'border-yellow-700  text-yellow-200 bg-yellow-950/50',  inactive: 'border-amber-900/30 text-amber-800' },
+];
+
 // ─── Open5e API types ────────────────────────────────────────────────────────
 interface O5eMonster {
   slug: string; name: string; cr: string; ac: number; hit_points: number;
@@ -75,6 +117,19 @@ interface Props {
   onAddToken?: (token: Token) => void;
 }
 
+// ── Pill button helper ────────────────────────────────────────────────────────
+function SourcePill({ preset, active, onClick }: { preset: SourcePreset; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      className={`flex items-center gap-1 px-2.5 py-1 rounded-full border text-[10px] font-medium transition-all whitespace-nowrap ${active ? preset.active : `${preset.inactive} hover:border-amber-700 hover:text-amber-600`}`}
+    >
+      <span>{preset.icon}</span>
+      <span>{preset.label}</span>
+    </button>
+  );
+}
+
 // ── Book Search Tab ──────────────────────────────────────────────────────────
 function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' | 'onAddLoot'>) {
   const [query, setQuery] = useState('');
@@ -85,10 +140,11 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
   const [spells, setSpells] = useState<O5eSpell[]>([]);
   const [items, setItems] = useState<O5eItem[]>([]);
   const [expandedSlug, setExpandedSlug] = useState<string | null>(null);
+  const [activeSource, setActiveSource] = useState<SourcePreset | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const search = useCallback(async () => {
-    if (!query.trim()) return;
+  const runSearch = useCallback(async (q: string, src: SourcePreset | null, type: 'monsters' | 'spells' | 'items') => {
+    if (!q.trim() && !src) return;
     abortRef.current?.abort();
     const ctrl = new AbortController();
     abortRef.current = ctrl;
@@ -98,29 +154,44 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
     setMonsters([]); setSpells([]); setItems([]);
     setExpandedSlug(null);
 
-    const q = encodeURIComponent(query.trim());
+    const qParam = q.trim() ? `&search=${encodeURIComponent(q.trim())}` : '';
+    const docParam = src?.type === 'document' ? `&document__slug=${encodeURIComponent(src.value)}` : '';
 
     try {
       const url =
-        searchType === 'monsters' ? `https://api.open5e.com/v2/creatures/?search=${q}&limit=20` :
-        searchType === 'spells'   ? `https://api.open5e.com/v1/spells/?search=${q}&limit=20` :
-                                    `https://api.open5e.com/v1/magicitems/?search=${q}&limit=20`;
+        type === 'monsters' ? `https://api.open5e.com/v2/creatures/?limit=30${qParam}${docParam}` :
+        type === 'spells'   ? `https://api.open5e.com/v1/spells/?limit=30${qParam}${docParam}` :
+                              `https://api.open5e.com/v1/magicitems/?limit=30${qParam}${docParam}`;
 
       const res = await fetch(url, { signal: ctrl.signal });
       if (!res.ok) throw new Error(`Open5e error: ${res.status}`);
       const data = await res.json();
 
-      if (searchType === 'monsters') setMonsters(data.results ?? []);
-      else if (searchType === 'spells') setSpells(data.results ?? []);
+      if (type === 'monsters') setMonsters(data.results ?? []);
+      else if (type === 'spells') setSpells(data.results ?? []);
       else setItems(data.results ?? []);
     } catch (e: any) {
       if (e.name !== 'AbortError') setError(e.message);
     } finally {
       setLoading(false);
     }
-  }, [query, searchType]);
+  }, []);
 
+  const search = () => runSearch(query, activeSource, searchType);
   const handleKey = (e: React.KeyboardEvent) => { if (e.key === 'Enter') search(); };
+
+  const selectSource = (preset: SourcePreset) => {
+    const next = activeSource?.value === preset.value ? null : preset;
+    setActiveSource(next);
+    const nextQ = next?.type === 'search' ? next.value : query;
+    if (next?.type === 'search') setQuery(nextQ);
+    runSearch(nextQ, next, searchType);
+  };
+
+  const clearAll = () => {
+    setQuery(''); setActiveSource(null);
+    setMonsters([]); setSpells([]); setItems([]); setError(null);
+  };
 
   const addMonsterToLibrary = (m: O5eMonster) => onAddMonster?.(o5eMonsterToMonsterData(m));
   const addItemToLoot = (item: O5eItem) => onAddLoot?.([{
@@ -134,20 +205,61 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
 
   const typeBtn = (type: typeof searchType, Icon: React.ElementType, label: string) => (
     <button
-      onClick={() => { setSearchType(type); setMonsters([]); setSpells([]); setItems([]); setExpandedSlug(null); setError(null); }}
+      onClick={() => {
+        setSearchType(type);
+        setMonsters([]); setSpells([]); setItems([]);
+        setExpandedSlug(null); setError(null);
+        if (query.trim() || activeSource) runSearch(query, activeSource, type);
+      }}
       className={`flex-1 flex items-center justify-center gap-1 py-1.5 text-[10px] tracking-widest uppercase transition-colors rounded ${searchType === type ? 'bg-amber-800/40 text-amber-400 border border-amber-700/50' : 'text-amber-800 hover:text-amber-600'}`}
     >
       <Icon className="w-3 h-3"/> {label}
     </button>
   );
 
+  const hasResults = monsters.length > 0 || spells.length > 0 || items.length > 0;
+  const hasFilter = query.trim() || activeSource;
+
   return (
     <div className="flex flex-col gap-3">
       {/* Heading */}
       <div>
-        <div className="text-amber-300 text-xs font-semibold mb-0.5" style={{ fontFamily: 'Georgia,serif' }}>Search SRD Library</div>
-        <div className="text-amber-900/60 text-[10px]">Search the D&D 5e SRD — type a book name, monster name, spell or item</div>
+        <div className="text-amber-300 text-xs font-semibold mb-0.5" style={{ fontFamily: 'Georgia,serif' }}>D&D 5e Source Library</div>
+        <div className="text-amber-900/60 text-[10px]">Pick a sourcebook or campaign to browse its content, or type a keyword below</div>
       </div>
+
+      {/* ── Core & 3rd-Party Sourcebooks ── */}
+      <div>
+        <div className="text-amber-700 text-[9px] tracking-widest uppercase mb-1.5">Core &amp; 3rd-Party Books</div>
+        <div className="flex flex-wrap gap-1.5">
+          {CORE_SOURCES.map(src => (
+            <SourcePill
+              key={src.value}
+              preset={src}
+              active={activeSource?.value === src.value}
+              onClick={() => selectSource(src)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* ── Official 5e Campaigns ── */}
+      <div>
+        <div className="text-amber-700 text-[9px] tracking-widest uppercase mb-1.5">Official 5e Campaigns &amp; Adventures</div>
+        <div className="flex flex-wrap gap-1.5">
+          {CAMPAIGN_SOURCES.map(src => (
+            <SourcePill
+              key={src.value}
+              preset={src}
+              active={activeSource?.value === src.value}
+              onClick={() => selectSource(src)}
+            />
+          ))}
+        </div>
+      </div>
+
+      {/* Divider */}
+      <div className="h-px bg-amber-900/20"/>
 
       {/* Type switcher */}
       <div className="flex gap-1">
@@ -155,6 +267,22 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
         {typeBtn('spells', Wand2, 'Spells')}
         {typeBtn('items', Package, 'Items')}
       </div>
+
+      {/* Active source badge */}
+      {activeSource && (
+        <div className={`flex items-center gap-1.5 text-[10px] px-2.5 py-1.5 rounded border ${activeSource.active}`}>
+          <span>{activeSource.icon}</span>
+          <span className="flex-1">
+            <strong>{activeSource.label}</strong>
+            <span className="opacity-60 ml-1.5">
+              {activeSource.type === 'document' ? '• filtering by SRD document' : '• keyword filter'}
+            </span>
+          </span>
+          <button onClick={clearAll} className="opacity-50 hover:opacity-100 transition-opacity">
+            <X className="w-3 h-3"/>
+          </button>
+        </div>
+      )}
 
       {/* Search input */}
       <div className="flex gap-1.5">
@@ -165,14 +293,14 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
             onChange={e => setQuery(e.target.value)}
             onKeyDown={handleKey}
             placeholder={
-              searchType === 'monsters' ? 'e.g. "goblin", "dragon", "zombie"…' :
-              searchType === 'spells'   ? 'e.g. "fireball", "sleep", "Xanathar"…' :
+              searchType === 'monsters' ? 'e.g. "goblin", "dragon", "undead"…' :
+              searchType === 'spells'   ? 'e.g. "fireball", "sleep", "charm"…' :
                                           'e.g. "sword of", "ring of", "wand"…'
             }
-            className="w-full bg-black/50 border border-amber-900/40 text-amber-200 rounded pl-8 pr-3 py-1.5 text-xs focus:outline-none focus:border-amber-600 placeholder-amber-900/40"
+            className="w-full bg-black/50 border border-amber-900/40 text-amber-200 rounded pl-8 pr-8 py-1.5 text-xs focus:outline-none focus:border-amber-600 placeholder-amber-900/40"
           />
-          {query && (
-            <button onClick={() => { setQuery(''); setMonsters([]); setSpells([]); setItems([]); setError(null); }}
+          {hasFilter && (
+            <button onClick={clearAll}
               className="absolute right-2 top-1/2 -translate-y-1/2 text-amber-800 hover:text-amber-500 transition-colors">
               <X className="w-3 h-3"/>
             </button>
@@ -180,7 +308,7 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
         </div>
         <button
           onClick={search}
-          disabled={loading || !query.trim()}
+          disabled={loading || !hasFilter}
           className="px-3 py-1.5 bg-amber-800/50 hover:bg-amber-700/60 border border-amber-700/50 text-amber-300 rounded text-xs font-semibold transition-colors disabled:opacity-40 flex-shrink-0"
         >
           {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin"/> : 'Search'}
@@ -192,7 +320,7 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
       {/* ── Monster results ── */}
       {searchType === 'monsters' && monsters.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-amber-700 text-[10px] tracking-widest uppercase">{monsters.length} result{monsters.length !== 1 ? 's' : ''}</div>
+          <div className="text-amber-700 text-[10px] tracking-widest uppercase">{monsters.length} monster{monsters.length !== 1 ? 's' : ''} found</div>
           {monsters.map(m => {
             const expanded = expandedSlug === m.slug;
             return (
@@ -220,12 +348,12 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
                       {(['STR','DEX','CON','INT','WIS','CHA'] as const).map((label, i) => {
                         const vals = [m.strength, m.dexterity, m.constitution, m.intelligence, m.wisdom, m.charisma];
                         const v = vals[i];
-                        const mod = Math.floor((v - 10) / 2);
+                        const modV = Math.floor((v - 10) / 2);
                         return (
                           <div key={label} className="bg-black/30 rounded py-1">
                             <div className="text-amber-700 font-bold">{label}</div>
                             <div className="text-amber-200">{v}</div>
-                            <div className="text-amber-600">{mod >= 0 ? `+${mod}` : mod}</div>
+                            <div className="text-amber-600">{modV >= 0 ? `+${modV}` : modV}</div>
                           </div>
                         );
                       })}
@@ -252,7 +380,7 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
       {/* ── Spell results ── */}
       {searchType === 'spells' && spells.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-amber-700 text-[10px] tracking-widest uppercase">{spells.length} result{spells.length !== 1 ? 's' : ''}</div>
+          <div className="text-amber-700 text-[10px] tracking-widest uppercase">{spells.length} spell{spells.length !== 1 ? 's' : ''} found</div>
           {spells.map(s => {
             const expanded = expandedSlug === s.slug;
             return (
@@ -287,7 +415,7 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
       {/* ── Item results ── */}
       {searchType === 'items' && items.length > 0 && (
         <div className="space-y-1.5">
-          <div className="text-amber-700 text-[10px] tracking-widest uppercase">{items.length} result{items.length !== 1 ? 's' : ''}</div>
+          <div className="text-amber-700 text-[10px] tracking-widest uppercase">{items.length} item{items.length !== 1 ? 's' : ''} found</div>
           {items.map(item => {
             const expanded = expandedSlug === item.slug;
             return (
@@ -320,9 +448,18 @@ function BookSearchTab({ onAddMonster, onAddLoot }: Pick<Props, 'onAddMonster' |
         </div>
       )}
 
-      {/* Empty state after search */}
-      {!loading && query && monsters.length === 0 && spells.length === 0 && items.length === 0 && !error && (
-        <div className="text-amber-900/50 text-xs text-center py-3">No results. Try a different name or search type.</div>
+      {/* Empty state */}
+      {!loading && hasFilter && !hasResults && !error && (
+        <div className="text-amber-900/50 text-xs text-center py-4">
+          No results found. Try a different source or keyword.
+        </div>
+      )}
+
+      {/* Initial prompt */}
+      {!loading && !hasFilter && !hasResults && (
+        <div className="text-amber-900/40 text-[10px] text-center py-4 leading-relaxed">
+          Select a sourcebook pill above to browse its content,<br/>or type a keyword and press Search.
+        </div>
       )}
     </div>
   );
@@ -469,7 +606,7 @@ function ImageUploadTab({ onAddMonster, onAddLoot, onAddNotes }: Pick<Props, 'on
               }}
               className="w-full py-2 bg-amber-800/40 hover:bg-amber-700/50 border border-amber-700/40 text-amber-300 rounded text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors"
             >
-              <Plus className="w-3.5 h-3.5"/> Add All Loot & Notes to Session
+              <Plus className="w-3.5 h-3.5"/> Add All Loot &amp; Notes to Session
             </button>
           )}
 
