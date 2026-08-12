@@ -7,19 +7,21 @@ import { MonsterStatBlock } from '@/components/features/dm/MonsterStatBlock';
 import { SceneNotes } from '@/components/features/dm/SceneNotes';
 import { LootManager } from '@/components/features/dm/LootManager';
 import { MapSessionPanel } from '@/components/features/dm/MonsterTokenCreator';
+import { AISourceImporter } from '@/components/features/dm/AISourceImporter';
 import { VoiceChat } from '@/components/features/voice/VoiceChat';
 import { DiceRollOverlay } from '@/components/features/dice/DiceRollOverlay';
-import { GameSession, Token, DiceRollBroadcast } from '@/types/dnd';
+import { GameSession, Token, DiceRollBroadcast, MonsterData, LootItem, SceneNote } from '@/types/dnd';
 import { loadSession, saveSession, fetchRecentRolls } from '@/lib/gameApi';
-import { LogOut, Cloud, CloudOff } from 'lucide-react';
+import { LogOut, Cloud, CloudOff, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const TABS = [
-  { id: 'map', label: '🗺', title: 'Map & Tokens' },
-  { id: 'dice', label: '🎲', title: 'Dice' },
-  { id: 'combat', label: '⚔️', title: 'Combat' },
-  { id: 'monsters', label: '📖', title: 'Monsters' },
-  { id: 'notes', label: '📜', title: 'Notes' },
-  { id: 'loot', label: '💰', title: 'Loot' },
+  { id: 'map',      label: '🗺',  title: 'Map & Tokens' },
+  { id: 'dice',     label: '🎲',  title: 'Dice' },
+  { id: 'combat',   label: '⚔️',  title: 'Combat' },
+  { id: 'monsters', label: '📖',  title: 'Monsters' },
+  { id: 'ai',       label: '✨',  title: 'AI Importer' },
+  { id: 'notes',    label: '📜',  title: 'Notes' },
+  { id: 'loot',     label: '💰',  title: 'Loot' },
 ];
 
 type SaveStatus = 'saved' | 'saving' | 'error';
@@ -30,6 +32,8 @@ export default function DMView() {
   const [session, setSession] = useState<GameSession | null>(null);
   const [saveStatus, setSaveStatus] = useState<SaveStatus>('saved');
   const [incomingRoll, setIncomingRoll] = useState<DiceRollBroadcast | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [customMonsters, setCustomMonsters] = useState<MonsterData[]>([]);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenRolls = useRef<Set<string>>(new Set());
   const rollPollSince = useRef(new Date().toISOString());
@@ -54,7 +58,6 @@ export default function DMView() {
       } else if (!local) { navigate('/'); }
     });
 
-    // Poll rolls from players
     const rollInterval = setInterval(async () => {
       const rolls = await fetchRecentRolls(id, rollPollSince.current);
       rollPollSince.current = new Date().toISOString();
@@ -108,7 +111,6 @@ export default function DMView() {
 
   return (
     <div className="flex flex-col h-screen bg-[#06090f] overflow-hidden">
-      {/* Player roll overlay */}
       <DiceRollOverlay roll={incomingRoll}/>
 
       {/* Top bar */}
@@ -122,6 +124,14 @@ export default function DMView() {
             <span className="text-amber-900 text-[10px]">Code:</span>
             <span className="text-amber-500 font-mono font-bold text-sm tracking-widest">{session.id}</span>
           </div>
+          {/* Sidebar toggle */}
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            title={sidebarOpen ? 'Hide tools' : 'Show tools'}
+            className="text-amber-800 hover:text-amber-500 border border-amber-900/40 hover:border-amber-700 rounded p-1 transition-colors"
+          >
+            {sidebarOpen ? <ChevronRight className="w-4 h-4"/> : <ChevronLeft className="w-4 h-4"/>}
+          </button>
           <button onClick={exit} className="text-amber-900 hover:text-amber-600 transition-colors">
             <LogOut className="w-4 h-4"/>
           </button>
@@ -130,7 +140,7 @@ export default function DMView() {
 
       {/* Main layout */}
       <div className="flex flex-1 overflow-hidden">
-        {/* Map */}
+        {/* Map — always visible, expands when sidebar collapses */}
         <div className="flex-1 overflow-hidden min-w-0">
           <MapCanvas
             mapImage={session.mapImage}
@@ -157,44 +167,60 @@ export default function DMView() {
           />
         </div>
 
-        {/* DM Tools sidebar */}
-        <div className="w-80 xl:w-96 flex flex-col border-l border-amber-900/30 bg-[#0b0e1a] flex-shrink-0">
-          <div className="flex border-b border-amber-900/30 flex-shrink-0">
-            {TABS.map(t => (
-              <button key={t.id} onClick={() => setTab(t.id)} title={t.title}
-                className={`flex-1 py-2.5 text-base transition-colors ${tab === t.id ? 'bg-amber-900/20 border-b-2 border-amber-600' : 'hover:bg-amber-900/10'}`}>
-                {t.label}
-              </button>
-            ))}
-          </div>
+        {/* Collapsible DM tools sidebar */}
+        <div
+          className="flex flex-col border-l border-amber-900/30 bg-[#0b0e1a] flex-shrink-0 overflow-hidden transition-all duration-300"
+          style={{ width: sidebarOpen ? '24rem' : '0px' }}
+        >
+          <div className="w-96 flex flex-col h-full">
+            {/* Tab bar — scrollable */}
+            <div className="flex border-b border-amber-900/30 flex-shrink-0 overflow-x-auto">
+              {TABS.map(t => (
+                <button key={t.id} onClick={() => setTab(t.id)} title={t.title}
+                  className={`flex-shrink-0 px-3 py-2.5 text-base transition-colors ${tab === t.id ? 'bg-amber-900/20 border-b-2 border-amber-600' : 'hover:bg-amber-900/10'}`}>
+                  {t.label}
+                </button>
+              ))}
+            </div>
 
-          <div className="flex-1 overflow-hidden">
-            {tab === 'map' && (
-              <MapSessionPanel
-                tokens={session.tokens}
-                sessionCode={session.id}
-                onAddPlayerToken={token => update({ tokens: [...session.tokens, token] })}
-                onRemoveToken={id => update({ tokens: session.tokens.filter(t => t.id !== id) })}
-                onUpdateToken={(id, patch) => update({ tokens: session.tokens.map(t => t.id === id ? { ...t, ...patch } : t) })}
-              />
-            )}
-            {tab === 'dice' && <DiceRoller/>}
-            {tab === 'combat' && (
-              <InitiativeTracker
-                entries={session.initiative}
-                activeIndex={session.initiativeIndex}
-                onUpdate={(entries, idx) => update({ initiative: entries, initiativeIndex: idx })}
-              />
-            )}
-            {tab === 'monsters' && (
-              <MonsterStatBlock onAddToken={(token: Token) => update({ tokens: [...session.tokens, token] })}/>
-            )}
-            {tab === 'notes' && <SceneNotes notes={session.notes} onUpdate={notes => update({ notes })}/>}
-            {tab === 'loot' && <LootManager loot={session.loot} onUpdate={loot => update({ loot })}/>}
-          </div>
+            <div className="flex-1 overflow-hidden">
+              {tab === 'map' && (
+                <MapSessionPanel
+                  tokens={session.tokens}
+                  sessionCode={session.id}
+                  onAddPlayerToken={token => update({ tokens: [...session.tokens, token] })}
+                  onRemoveToken={id => update({ tokens: session.tokens.filter(t => t.id !== id) })}
+                  onUpdateToken={(id, patch) => update({ tokens: session.tokens.map(t => t.id === id ? { ...t, ...patch } : t) })}
+                />
+              )}
+              {tab === 'dice' && <DiceRoller/>}
+              {tab === 'combat' && (
+                <InitiativeTracker
+                  entries={session.initiative}
+                  activeIndex={session.initiativeIndex}
+                  onUpdate={(entries, idx) => update({ initiative: entries, initiativeIndex: idx })}
+                />
+              )}
+              {tab === 'monsters' && (
+                <MonsterStatBlock
+                  extraMonsters={customMonsters}
+                  onAddToken={(token: Token) => update({ tokens: [...session.tokens, token] })}
+                />
+              )}
+              {tab === 'ai' && (
+                <AISourceImporter
+                  onAddMonster={(m: MonsterData) => setCustomMonsters(prev => [...prev, m])}
+                  onAddLoot={(items: LootItem[]) => update({ loot: [...session.loot, ...items] })}
+                  onAddNotes={(notes: SceneNote[]) => update({ notes: [...session.notes, ...notes] })}
+                />
+              )}
+              {tab === 'notes' && <SceneNotes notes={session.notes} onUpdate={notes => update({ notes })}/>}
+              {tab === 'loot' && <LootManager loot={session.loot} onUpdate={loot => update({ loot })}/>}
+            </div>
 
-          {/* Voice Chat */}
-          <VoiceChat sessionId={session.id} userId={dmId} userName={dmName}/>
+            {/* Voice Chat */}
+            <VoiceChat sessionId={session.id} userId={dmId} userName={dmName}/>
+          </div>
         </div>
       </div>
     </div>

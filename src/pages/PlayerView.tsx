@@ -7,13 +7,14 @@ import { PlayerDiceRoller } from '@/components/features/dice/PlayerDiceRoller';
 import { DiceRollOverlay } from '@/components/features/dice/DiceRollOverlay';
 import { GameSession, DiceRollBroadcast } from '@/types/dnd';
 import { loadSession, saveSession, fetchRecentRolls } from '@/lib/gameApi';
-import { LogOut, Wifi, WifiOff } from 'lucide-react';
+import { LogOut, Wifi, WifiOff, ChevronLeft, ChevronRight } from 'lucide-react';
 
 export default function PlayerView() {
   const navigate = useNavigate();
   const [session, setSession] = useState<GameSession | null>(null);
   const [connected, setConnected] = useState(true);
   const [incomingRoll, setIncomingRoll] = useState<DiceRollBroadcast | null>(null);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const playerName = localStorage.getItem('dnd_player_name') || 'Adventurer';
   const playerId = localStorage.getItem('dnd_player_id') || '';
@@ -35,7 +36,6 @@ export default function PlayerView() {
       else if (!local) navigate('/');
     }).catch(() => setConnected(false));
 
-    // Poll session
     const sessionInterval = setInterval(() => {
       loadSession(id).then(remote => {
         if (remote) { setSession(remote); setConnected(true); }
@@ -43,7 +43,6 @@ export default function PlayerView() {
       }).catch(() => setConnected(false));
     }, 1500);
 
-    // Poll dice rolls from others
     const rollInterval = setInterval(async () => {
       const rolls = await fetchRecentRolls(id, rollPollSince.current);
       rollPollSince.current = new Date().toISOString();
@@ -51,7 +50,7 @@ export default function PlayerView() {
         if (!seenRolls.current.has(roll.id) && roll.playerId !== playerId) {
           seenRolls.current.add(roll.id);
           setIncomingRoll(roll);
-          break; // Show one at a time
+          break;
         }
       }
     }, 1500);
@@ -82,9 +81,9 @@ export default function PlayerView() {
 
   return (
     <div className="flex flex-col h-screen bg-[#06090f] overflow-hidden">
-      {/* Incoming roll overlay (from other players / DM) */}
       <DiceRollOverlay roll={incomingRoll}/>
 
+      {/* Top bar */}
       <div className="flex items-center gap-3 px-4 py-2 bg-[#0b0e1a] border-b border-amber-900/30 flex-shrink-0 h-11">
         <span className="text-amber-600 text-[11px] tracking-widest font-bold hidden sm:block">⚔ DUNGEON FORGE</span>
         <div className="w-px h-4 bg-amber-900/50 hidden sm:block"/>
@@ -94,6 +93,14 @@ export default function PlayerView() {
             {connected ? <Wifi className="w-3.5 h-3.5 text-green-700"/> : <WifiOff className="w-3.5 h-3.5 text-red-700"/>}
           </div>
           <span className="text-amber-500 text-xs hidden sm:block">{playerName}</span>
+          {/* Sidebar toggle */}
+          <button
+            onClick={() => setSidebarOpen(o => !o)}
+            title={sidebarOpen ? 'Hide panel' : 'Show panel'}
+            className="text-amber-800 hover:text-amber-500 border border-amber-900/40 hover:border-amber-700 rounded p-1 transition-colors"
+          >
+            {sidebarOpen ? <ChevronRight className="w-4 h-4"/> : <ChevronLeft className="w-4 h-4"/>}
+          </button>
           <button onClick={exit} className="text-amber-900 hover:text-amber-600 transition-colors">
             <LogOut className="w-4 h-4"/>
           </button>
@@ -101,6 +108,7 @@ export default function PlayerView() {
       </div>
 
       <div className="flex flex-1 overflow-hidden">
+        {/* Map — always visible */}
         <div className="flex-1 overflow-hidden min-w-0">
           <MapCanvas
             mapImage={session.mapImage}
@@ -120,24 +128,30 @@ export default function PlayerView() {
           />
         </div>
 
-        <div className="w-80 xl:w-96 flex flex-col border-l border-amber-900/30 bg-[#0b0e1a] flex-shrink-0">
-          <div className="px-3 py-2 border-b border-amber-900/30 flex-shrink-0">
-            <div className="text-amber-700 text-[10px] tracking-widest uppercase">Character Sheet</div>
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <CharacterSheet/>
-          </div>
+        {/* Collapsible sidebar */}
+        <div
+          className="flex flex-col border-l border-amber-900/30 bg-[#0b0e1a] flex-shrink-0 overflow-hidden transition-all duration-300"
+          style={{ width: sidebarOpen ? '20rem' : '0px' }}
+        >
+          <div className="w-80 flex flex-col h-full">
+            <div className="px-3 py-2 border-b border-amber-900/30 flex-shrink-0">
+              <div className="text-amber-700 text-[10px] tracking-widest uppercase">Character Sheet</div>
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <CharacterSheet/>
+            </div>
 
-          {/* Player dice roller */}
-          <PlayerDiceRoller
-            compact
-            sessionId={session.id}
-            playerId={playerId}
-            playerName={playerName}
-          />
+            {/* Dice roller */}
+            <PlayerDiceRoller
+              compact
+              sessionId={session.id}
+              playerId={playerId}
+              playerName={playerName}
+            />
 
-          {/* Voice Chat */}
-          <VoiceChat sessionId={session.id} userId={playerId || 'player_' + Date.now()} userName={playerName}/>
+            {/* Voice Chat */}
+            <VoiceChat sessionId={session.id} userId={playerId || 'player_' + Date.now()} userName={playerName}/>
+          </div>
         </div>
       </div>
     </div>

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { useCharacter } from '@/hooks/useCharacter';
 import { ABILITIES, SKILLS, CLASSES, RACES, BACKGROUNDS, ALIGNMENTS, HIT_DICE, modStr } from '@/constants/dnd5e';
 import { AbilityKey, EquipItem, Spell } from '@/types/dnd';
-import { Plus, Trash2, Star, Heart, ImageIcon } from 'lucide-react';
+import { Plus, Trash2, Star, Heart, ImageIcon, Sparkles, Loader2 } from 'lucide-react';
+import { supabase } from '@/lib/supabase';
+import { FunctionsHttpError } from '@supabase/supabase-js';
 
 const TABS = ['Stats','Skills','Combat','Spells','Gear','Notes'] as const;
 type Tab = typeof TABS[number];
@@ -11,10 +13,30 @@ const inp = "bg-black/40 border border-amber-900/40 text-amber-100 rounded px-2 
 const sel = `${inp} cursor-pointer`;
 
 export function CharacterSheet() {
-  const { char, update, profB, mod, skillBonus, saveBonus, passivePerception, spellSaveDC, spellAttackBonus } = useCharacter();
+  const { char, update, profB, mod, skillBonus, saveBonus, spellSaveDC, spellAttackBonus } = useCharacter();
   const [tab, setTab] = useState<Tab>('Stats');
   const [newEquip, setNewEquip] = useState('');
   const [newSpell, setNewSpell] = useState({ name:'', level:1, school:'Evocation', castingTime:'1 action', range:'60 ft.', components:'V,S', duration:'Instantaneous', description:'' });
+  const [generatingAvatar, setGeneratingAvatar] = useState(false);
+  const [avatarError, setAvatarError] = useState<string | null>(null);
+
+  const generateAvatar = useCallback(async () => {
+    setGeneratingAvatar(true);
+    setAvatarError(null);
+    const { data, error } = await supabase.functions.invoke('ai-avatar-generate', {
+      body: { name: char.name, race: char.race, charClass: char.charClass, alignment: char.alignment, background: char.background },
+    });
+    if (error) {
+      let msg = error.message;
+      if (error instanceof FunctionsHttpError) {
+        try { msg = await error.context.text(); } catch {}
+      }
+      setAvatarError(msg);
+    } else if (data?.url) {
+      update({ avatarUrl: data.url });
+    }
+    setGeneratingAvatar(false);
+  }, [char.name, char.race, char.charClass, char.alignment, char.background, update]);
 
   const upScore = (k: AbilityKey, v: number) => update({ abilityScores: { ...char.abilityScores, [k]: Math.max(1, Math.min(30, v)) } });
   const upSaveProf = (k: AbilityKey) => update({ saveProficiencies: { ...char.saveProficiencies, [k]: !char.saveProficiencies[k] } });
@@ -56,12 +78,38 @@ export function CharacterSheet() {
         {/* ── STATS TAB ── */}
         {tab === 'Stats' && (
           <>
-            {/* Avatar */}
-            {char.avatarUrl && (
-              <div className="flex justify-center mb-2">
-                <img src={char.avatarUrl} alt={char.name} className="w-20 h-20 rounded-full object-cover border-2 border-amber-700/60 shadow-lg"/>
-              </div>
-            )}
+            {/* Avatar with AI generate button */}
+            <div className="flex flex-col items-center gap-2 mb-1">
+              {char.avatarUrl ? (
+                <div className="relative">
+                  <img src={char.avatarUrl} alt={char.name} className="w-24 h-24 rounded-full object-cover border-2 border-amber-700/60 shadow-lg"/>
+                  <button
+                    onClick={generateAvatar}
+                    disabled={generatingAvatar}
+                    title="Regenerate avatar with AI"
+                    className="absolute -bottom-1 -right-1 w-7 h-7 rounded-full bg-amber-800 hover:bg-amber-700 border border-amber-600 flex items-center justify-center transition-colors disabled:opacity-50"
+                  >
+                    {generatingAvatar ? <Loader2 className="w-3.5 h-3.5 text-amber-200 animate-spin"/> : <Sparkles className="w-3.5 h-3.5 text-amber-200"/>}
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={generateAvatar}
+                  disabled={generatingAvatar}
+                  className="w-24 h-24 rounded-full border-2 border-dashed border-amber-800/50 hover:border-amber-600 flex flex-col items-center justify-center gap-1 bg-[#0d1525] transition-colors disabled:opacity-50 group"
+                >
+                  {generatingAvatar
+                    ? <Loader2 className="w-6 h-6 text-amber-600 animate-spin"/>
+                    : <>
+                        <Sparkles className="w-6 h-6 text-amber-800 group-hover:text-amber-500 transition-colors"/>
+                        <span className="text-amber-900 group-hover:text-amber-600 text-[9px] transition-colors text-center">AI Portrait</span>
+                      </>
+                  }
+                </button>
+              )}
+              {avatarError && <div className="text-red-400 text-[10px] text-center max-w-[200px]">{avatarError}</div>}
+            </div>
+
             {/* Identity */}
             <div className="grid grid-cols-2 gap-1.5">
               <div className="col-span-2"><label className="text-amber-800 text-[10px] tracking-widest block mb-0.5">CHARACTER NAME</label><input value={char.name} onChange={e=>update({name:e.target.value})} className={inp}/></div>
@@ -73,7 +121,7 @@ export function CharacterSheet() {
               <div><label className="text-amber-800 text-[10px] tracking-widest block mb-0.5">XP</label><input type="number" min={0} value={char.xp} onChange={e=>update({xp:parseInt(e.target.value)||0})} className={inp}/></div>
               <div className="col-span-2">
                 <label className="text-amber-800 text-[10px] tracking-widest block mb-0.5 flex items-center gap-1"><ImageIcon className="w-2.5 h-2.5"/> AVATAR URL</label>
-                <input value={char.avatarUrl || ''} onChange={e=>update({avatarUrl:e.target.value})} placeholder="https://… character image" className={inp}/>
+                <input value={char.avatarUrl || ''} onChange={e=>update({avatarUrl:e.target.value})} placeholder="https://… or use AI generator above" className={inp}/>
               </div>
             </div>
 
@@ -147,7 +195,6 @@ export function CharacterSheet() {
         {/* ── COMBAT TAB ── */}
         {tab === 'Combat' && (
           <>
-            {/* HP */}
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-3">
               <div className="text-amber-800 text-[10px] tracking-widest mb-2 uppercase flex items-center gap-1"><Heart className="w-3 h-3 text-red-700"/> Hit Points</div>
               <div className="flex items-center gap-2 mb-2">
@@ -167,8 +214,6 @@ export function CharacterSheet() {
                 <div><label className="text-amber-800 text-[9px] tracking-widest block mb-0.5">TEMP HP</label><input type="number" value={char.tempHp} onChange={e=>update({tempHp:parseInt(e.target.value)||0})} className={inp}/></div>
               </div>
             </div>
-
-            {/* Combat stats */}
             <div className="grid grid-cols-3 gap-2">
               {[['AC', char.ac, (v:number)=>update({ac:v})],['Speed',char.speed,(v:number)=>update({speed:v})],['Init.',mod('dexterity'),null]] .map(([label,val,setter]) => (
                 <div key={label as string} className="bg-[#0d1525] border border-amber-900/30 rounded p-2 text-center">
@@ -179,8 +224,6 @@ export function CharacterSheet() {
                 </div>
               ))}
             </div>
-
-            {/* Hit Dice */}
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2.5">
               <div className="text-amber-800 text-[9px] tracking-widest mb-1.5 uppercase">Hit Dice ({char.hitDice})</div>
               <div className="flex items-center gap-2">
@@ -192,8 +235,6 @@ export function CharacterSheet() {
                 </div>
               </div>
             </div>
-
-            {/* Death saves */}
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2.5">
               <div className="text-amber-800 text-[9px] tracking-widest mb-2 uppercase">Death Saving Throws</div>
               <div className="flex items-center justify-between">
@@ -236,8 +277,6 @@ export function CharacterSheet() {
                 <div className="text-amber-800 text-[9px] tracking-widest">ATK BONUS</div>
               </div>
             </div>
-
-            {/* Spell slots */}
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2.5">
               <div className="text-amber-800 text-[9px] tracking-widest mb-2 uppercase">Spell Slots</div>
               <div className="space-y-1.5">
@@ -259,8 +298,6 @@ export function CharacterSheet() {
                 })}
               </div>
             </div>
-
-            {/* Add spell */}
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2.5 space-y-1.5">
               <div className="text-amber-800 text-[9px] tracking-widest uppercase mb-1">Add Spell</div>
               <div className="grid grid-cols-3 gap-1.5">
@@ -274,8 +311,6 @@ export function CharacterSheet() {
               <textarea value={newSpell.description} onChange={e=>setNewSpell(p=>({...p,description:e.target.value}))} placeholder="Description (optional)" className={`${inp} resize-none h-12`}/>
               <button onClick={addSpell} className="w-full py-1.5 bg-amber-800/40 hover:bg-amber-700/50 border border-amber-700/40 text-amber-300 rounded text-xs flex items-center justify-center gap-1 transition-colors"><Plus className="w-3 h-3"/>Add Spell</button>
             </div>
-
-            {/* Spell list */}
             {char.spells.length > 0 && (
               <div className="space-y-1">
                 {[...Array(10).keys()].map(lvl => {
@@ -303,7 +338,6 @@ export function CharacterSheet() {
         {/* ── GEAR TAB ── */}
         {tab === 'Gear' && (
           <>
-            {/* Currency */}
             <div className="bg-[#0d1525] border border-amber-900/30 rounded p-2.5">
               <div className="text-amber-800 text-[9px] tracking-widest mb-2 uppercase">Currency</div>
               <div className="grid grid-cols-5 gap-1.5">
@@ -315,14 +349,10 @@ export function CharacterSheet() {
                 ))}
               </div>
             </div>
-
-            {/* Add equipment */}
             <div className="flex gap-1.5">
               <input value={newEquip} onChange={e=>setNewEquip(e.target.value)} placeholder="Item name" className={inp} onKeyDown={e=>e.key==='Enter'&&addEquip()}/>
               <button onClick={addEquip} className="bg-amber-800/40 hover:bg-amber-700/50 border border-amber-700/40 text-amber-300 rounded px-3 py-1.5 text-xs transition-colors flex-shrink-0"><Plus className="w-3.5 h-3.5"/></button>
             </div>
-
-            {/* Equipment list */}
             <div className="space-y-1">
               {char.equipment.map(item=>(
                 <div key={item.id} className="flex items-center gap-2 bg-[#0d1525] border border-amber-900/20 rounded px-2.5 py-1.5">

@@ -4,11 +4,11 @@ import { MONSTERS, TOKEN_COLORS, abilityMod, modStr } from '@/constants/dnd5e';
 import { MonsterData, Token } from '@/types/dnd';
 import { CustomMonsterEditor } from './CustomMonsterEditor';
 
-interface Props { onAddToken?: (token: Token) => void; }
+interface Props { onAddToken?: (token: Token) => void; extraMonsters?: MonsterData[]; }
 
 type View = 'library' | 'custom';
 
-export function MonsterStatBlock({ onAddToken }: Props) {
+export function MonsterStatBlock({ onAddToken, extraMonsters = [] }: Props) {
   const [view, setView] = useState<View>('library');
   const [selected, setSelected] = useState<MonsterData | null>(null);
   const [open, setOpen] = useState(false);
@@ -19,7 +19,7 @@ export function MonsterStatBlock({ onAddToken }: Props) {
   const [customMonsters, setCustomMonsters] = useState<MonsterData[]>([]);
   const [filter, setFilter] = useState('');
 
-  const allMonsters = [...MONSTERS, ...customMonsters];
+  const allMonsters = [...MONSTERS, ...customMonsters, ...extraMonsters];
   const filtered = filter ? allMonsters.filter(m => m.name.toLowerCase().includes(filter.toLowerCase())) : allMonsters;
 
   const select = (m: MonsterData) => { setSelected(m); setOpen(false); setTokenName(m.name); setTokenHp(m.avgHp); setShowAdd(false); };
